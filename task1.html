@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url('task1.jpg'); 
+            background-size: cover; 
+            background-position: center; 
+            background-repeat: no-repeat; 
+            color: #000;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        body.dark-mode {
+            background-color: #333; 
+            color: #fff; 
+        }
+        .app-frame {
+            background-color: rgba(255, 255, 255, 0.8); 
+            padding: 50px;
+            border-radius: 30px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 50%;
+            text-align: center;
+            margin-right: 650px; 
+            margin-top: 10px; 
+        }
+        body.dark-mode .app-frame {
+            background-color: rgba(68, 68, 68, 0.9); 
+        }
+        h1 {
+            color: #d29546;
+            margin-bottom: 20px;
+        }
+        input[type="text"], button {
+            padding: 10px;
+            font-size: 1em;
+        }
+        input[type="text"] {
+            width: calc(100% - 110px);
+            margin-bottom: 10px;
+        }
+        button {
+            cursor: pointer;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background-color: rgba(249,249,249,0.9); 
+        }
+        button.edit, button.delete {
+            margin-left: 10px;
+            font-size: 0.9em;
+        }
+        body.dark-mode li {
+            background-color: rgba(85,85,85,0.9);
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #f3f3f3;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .progress-bar {
+            height: 20px;
+            background-color: #d29546;
+            width: 0%;
+            border-radius: 5px;
+            transition: width 0.3s;
+        }
+        .popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white; 
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            z-index: 100;
+            display: none;
+        }
+        .popup button {
+            padding: 10px; 
+            margin-top: 10px; 
+            background-color: #d29546; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+        }
+        .popup button:hover {
+            background-color: #b57e36; 
+        }
+        body.dark-mode .popup {
+            background-color: #444; 
+            color: #fff; 
+        }
+        .popup-overlay {
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,.5); 
+            z-index: 99; 
+            display: none; 
+        }
+        .theme-toggle {
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            margin-top: 20px; 
+        }
+        .theme-toggle label {
+            margin-right: 10px; 
+        }
+    </style>
+</head>
+<body>
+    <div class="popup-overlay" id="popup-overlay"></div>
+    <div class="popup" id="popup">
+        <h2>Please enter your username</h2>
+        <input type="text" id="username-input" placeholder="Enter your username">
+        <button onclick="saveUsername()">Submit</button>
+    </div>
+
+    <div class="app-frame">
+        <h1>Task Management System</h1>
+        <div id="username-container">
+            <button onclick="showPopup()">Enter Username</button>
+        </div>
+        <div class="theme-toggle">
+            <label for="theme">Dark Mode:</label>
+            <input type="checkbox" id="theme" onchange="toggleTheme()">
+        </div>
+        <h3>Create Task</h3>
+        <input type="text" id="new-task" placeholder="Enter new task">
+        <button onclick="addTask()">Add Task</button>
+
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <h3>Tasks</h3>
+        <button onclick="showAllTasks()">All Tasks</button>
+        <button onclick="showCompletedTasks()">Completed Tasks</button>
+        <button onclick="showPendingTasks()">Pending Tasks</button>
+
+        <h3>Pending Tasks (<span id="pending-count">0</span>)</h3>
+        <ul id="pending-tasks"></ul>
+
+        <h3>Completed Tasks (<span id="completed-count">0</span>)</h3>
+        <ul id="completed-tasks"></ul>
+    </div>
+
+    <script>
+        let tasks = [];
+        let username = "";
+        let currentFilter = 'all';
+
+        function addTask() {
+            const taskInput = document.getElementById('new-task');
+            const taskText = taskInput.value.trim();
+
+            if (!username) {
+                alert("Please enter your username before adding tasks.");
+                return;
+            }
+
+            if (taskText) {
+                tasks.push({ text: taskText, completed: false });
+                taskInput.value = '';
+                renderTasks();
+            }
+        }
+
+        function showPopup() {
+            document.getElementById('popup-overlay').style.display = 'block';
+            document.getElementById('popup').style.display = 'block';
+        }
+
+        function saveUsername() {
+            const userInput = document.getElementById('username-input').value.trim();
+            if (userInput) {
+                username = userInput;
+                document.getElementById('username-container').innerHTML = `<h2>Welcome, ${username}</h2>`;
+                closePopup();
+            }
+        }
+
+        function closePopup() {
+            document.getElementById('popup-overlay').style.display = 'none';
+            document.getElementById('popup').style.display = 'none';
+        }
+
+        function renderTasks() {
+            const pendingList = document.getElementById('pending-tasks');
+            const completedList = document.getElementById('completed-tasks');
+            const pendingCount = document.getElementById('pending-count');
+            const completedCount = document.getElementById('completed-count');
+            const progressBar = document.getElementById('progress-bar');
+
+            pendingList.innerHTML = '';
+            completedList.innerHTML = '';
+
+            let pendingTaskCount = 0;
+            let completedTaskCount = 0;
+
+            tasks.forEach((task, index) => {
+                if (currentFilter === 'completed' && !task.completed) return;
+                if (currentFilter === 'pending' && task.completed) return;
+
+                const li = document.createElement('li');
+                li.textContent = task.text;
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = task.completed;
+                checkbox.onchange = () => toggleCompleteTask(index);
+
+                const undoBtn = document.createElement('button');
+                undoBtn.textContent = 'Undo';
+                undoBtn.onclick = () => toggleCompleteTask(index);
+                undoBtn.className = 'edit';
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.onclick = () => deleteTask(index);
+                deleteBtn.className = 'delete';
+
+                li.appendChild(checkbox);
+                li.appendChild(deleteBtn);
+
+                if (task.completed) {
+                    li.appendChild(undoBtn);
+                    completedList.appendChild(li);
+                    completedTaskCount++;
+                } else {
+                    li.appendChild(undoBtn);
+                    pendingList.appendChild(li);
+                    pendingTaskCount++;
+                }
+            });
+
+            pendingCount.textContent = pendingTaskCount;
+            completedCount.textContent = completedTaskCount;
+
+            const totalTasks = tasks.length;
+            const completedTasks = tasks.filter(task => task.completed).length;
+            const completionPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+            progressBar.style.width = completionPercentage + '%';
+        }
+
+        function toggleCompleteTask(index) {
+            tasks[index].completed = !tasks[index].completed;
+            renderTasks();
+        }
+
+        function editTask(index) {
+            const newTaskText = prompt('Edit your task:', tasks[index].text);
+            if (newTaskText) {
+                tasks[index].text = newTaskText;
+                renderTasks();
+            }
+        }
+
+        function deleteTask(index) {
+            tasks.splice(index, 1);
+            renderTasks();
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        function showAllTasks() {
+            currentFilter = 'all';
+            renderTasks();
+        }
+
+        function showCompletedTasks() {
+            currentFilter = 'completed';
+            renderTasks();
+        }
+
+        function showPendingTasks() {
+            currentFilter = 'pending';
+            renderTasks();
+        }
+    </script>
+</body>
+</html>
